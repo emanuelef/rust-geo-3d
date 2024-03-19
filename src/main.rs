@@ -1,6 +1,5 @@
 use std::time::Instant;
-use std::sync::{Arc, Mutex};
-use std::thread;
+use rayon::prelude::*;
 use crate::position::haversine_distance;
 mod point3d;
 mod position;
@@ -25,38 +24,10 @@ fn main() {
 
     let start_time = Instant::now();
 
-    // Define the number of threads to use
-    let num_threads = num_cpus::get();
-
-    // Arc and Mutex for sharing mutable state between threads
-    let position1_arc = Arc::new(position1.coord2d);
-    let position2_arc = Arc::new(position2.coord2d);
-
-    // Create a vector to hold the thread handles
-    let mut handles = vec![];
-
-    // Use Rayon to easily parallelize the computation
-    for _ in 0..num_threads {
-        // Clone Arcs for each thread
-        let position1_clone = Arc::clone(&position1_arc);
-        let position2_clone = Arc::clone(&position2_arc);
-
-        // Spawn a new thread
-        let handle = thread::spawn(move || {
-            // Perform the computation in each thread
-            for _ in 0..250_000_000 {
-                let _distance = haversine_distance(&position1_clone, &position2_clone);
-            }
-        });
-
-        // Store the thread handle
-        handles.push(handle);
-    }
-
-    // Wait for all threads to finish
-    for handle in handles {
-        handle.join().unwrap();
-    }
+    // Use Rayon's parallel iterator to parallelize the computation
+    (0..250_000_000).into_par_iter().for_each(|_| {
+        let _distance = haversine_distance(&position1.coord2d, &position2.coord2d);
+    });
 
     let end_time = Instant::now();
     let duration = end_time - start_time;
